@@ -1,0 +1,12 @@
+google-generativeai
+pillow
+fastapi
+uvicorn
+python-multipart
+sentence-transformers
+torch
+chromadb
+qdrant-client
+python-dotenv
+qdrant-client
+transformers
