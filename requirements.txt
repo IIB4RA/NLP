@@ -11,3 +11,4 @@ python-dotenv
 qdrant-client
 transformers
 docx
+fitz
