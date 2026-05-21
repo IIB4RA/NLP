@@ -1,12 +1,23 @@
 import json
 import requests
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
 from router import classify_intent
 from retriever import get_relevant_context
 from generator import generate_rag_response
 from config import settings
+
+# Importing your new VLM functions
+from vlm import extract_text_from_file, extract_question_from_text
+
+# Initialize logger and global configuration constants
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+MAX_FILE_SIZE_MB = 10.0
 
 app = FastAPI(title="University RAG Assistant API", version="5.0.0")
 
@@ -128,11 +139,7 @@ def search_with_expansion(smart_query: str) -> list:
     return all_contexts
 
 
-@app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest):
-    user_question = request.query.strip()
-    chat_history = request.history.strip()
-
+async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
     # Step 1: Intent classification
     intent = classify_intent(user_question)
     print(f"\n[LOG] Intent: {intent}")
@@ -209,6 +216,65 @@ async def chat_endpoint(request: ChatRequest):
             "smart_query": smart_query
         }
     }
+    
+
+
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest):
+    user_question = request.query.strip()
+    chat_history = request.history.strip()
+
+    return await run_core_rag_pipeline(user_question, chat_history)
+
+
+
+@app.post("/api/chat/upload")
+async def chat_upload_endpoint(
+    file: UploadFile = File(...),
+    history: str = Form(default=""),
+    extra_query: str = Form(default=""),
+):
+    file_bytes = await file.read()
+    size_mb = len(file_bytes) / (1024 * 1024)
+    if size_mb > MAX_FILE_SIZE_MB:
+        return {
+            "response": f"عذراً، حجم الملف ({size_mb:.1f} MB) يتجاوز الحد المسموح ({MAX_FILE_SIZE_MB} MB).",
+            "intent": "ERROR",
+        }
+ 
+    try:
+        extracted_text = await extract_text_from_file(
+            file_bytes=file_bytes,
+            mime_type=file.content_type or "",
+            filename=file.filename or "",
+        )
+    except ValueError as e:
+        return {"response": str(e), "intent": "ERROR"}
+    except Exception as e:
+        logger.error(f"[UPLOAD] Extraction failed: {e}", exc_info=True)
+        return {
+            "response": "عذراً، حدث خطأ أثناء معالجة الملف. يرجى المحاولة مرة أخرى.",
+            "intent": "ERROR",
+        }
+ 
+    if not extracted_text or extracted_text == "[لا يوجد نص في الصورة]":
+        return {
+            "response": "لم أتمكن من استخراج نص من هذا الملف. يرجى التأكد من أن الملف يحتوي على نص واضح.",
+            "intent": "ERROR",
+        }
+ 
+    logger.info(f"[UPLOAD] Extracted {len(extracted_text)} chars from {file.filename}")
+ 
+    combined_text = (
+        f"{extra_query.strip()}\n\n{extracted_text}" if extra_query.strip()
+        else extracted_text
+    )
+ 
+    user_question = await extract_question_from_text(combined_text)
+    logger.info(f"[UPLOAD] Final question extracted from file context: {user_question}")
+ 
+    # Run the extracted question through the exact same core pipeline asynchronously
+    return await run_core_rag_pipeline(user_question=user_question, chat_history=history.strip())
 
 
 if __name__ == "__main__":
