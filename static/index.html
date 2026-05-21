@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UJ RAG</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --chat-bg: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --bot-bubble: #334155;
+            --user-bubble: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background-color: var(--chat-bg);
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        .chat-header {
+            background: linear-gradient(90deg, #1e293b, #0f172a);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 12px;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease-in;
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background-color: var(--user-bubble);
+            color: white;
+            align-self: flex-start;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bot-message {
+            background-color: var(--bot-bubble);
+            color: var(--text-main);
+            align-self: flex-end;
+            border-bottom-left-radius: 2px;
+            border: 1px solid #475569;
+        }
+
+        .intent-tag {
+            font-size: 0.7rem;
+            background-color: #0f172a;
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 10px;
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            border: 1px solid var(--primary);
+            font-family: monospace;
+        }
+
+        .file-preview-bar {
+            display: none;
+            padding: 8px 20px;
+            background-color: #0f172a;
+            border-top: 1px solid #334155;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #60a5fa;
+        }
+
+        .file-clear-btn {
+            cursor: pointer;
+            color: #ef4444;
+            font-weight: bold;
+            padding: 0 5px;
+        }
+
+        .input-area {
+            padding: 20px;
+            background-color: #1e293b;
+            border-top: 1px solid #334155;
+            display: flex;
+            gap: 10px;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 0 15px;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--primary);
+            background-color: #1e293b;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background-color: #0f172a;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+        }
+
+        button {
+            padding: 0 25px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .bot-message strong {
+            color: #60a5fa;
+        }
+
+        .loading {
+            align-self: flex-end;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div>
+                <h2>UJ RAG</h2>
+            </div>
+            <div>
+                <button onclick="clearChat()" style="background-color: transparent; border: 1px solid #475569; padding: 5px 10px; font-size: 0.8rem;">مسح المحادثة</button>
+            </div>
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            <div class="message bot-message">
+                مرحباً بك في UJ RAG! يمكنك كتابة استفسارك أو إرفاق ملف/صورة وسأقوم بتحليلها لك.
+            </div>
+        </div>
+        
+        <div class="loading" id="loadingIndicator">جاري المعالجة والبحث في اللوائح والأنظمة...</div>
+
+        <div class="file-preview-bar" id="filePreviewBar">
+            <span id="fileNameDisplay"></span>
+            <span class="file-clear-btn" onclick="clearFile()">✕</span>
+        </div>
+
+        <div class="input-area">
+            <label for="fileInput" class="file-upload-label" title="إرفاق ملف أو صورة">
+                <span style="font-size: 1.2rem; color: var(--text-muted);">📎</span>
+            </label>
+            <input type="file" id="fileInput" style="display: none;" onchange="handleFileSelection()">
+            
+            <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">إرسال</button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const fileInput = document.getElementById('fileInput');
+        const filePreviewBar = document.getElementById('filePreviewBar');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        const BASE_API_URL = '/api';
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function formatBotResponse(text) {
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+        }
+
+        function handleFileSelection() {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = `الملف المختار: ${fileInput.files[0].name}`;
+                filePreviewBar.style.display = 'flex';
+            } else {
+                clearFile();
+            }
+        }
+
+        function clearFile() {
+            fileInput.value = '';
+            filePreviewBar.style.display = 'none';
+            fileNameDisplay.textContent = '';
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            const hasFile = fileInput.files.length > 0;
+
+            if (!text && !hasFile) return;
+
+            // Render matching bubble preview inside chat layout
+            if (hasFile) {
+                const attachmentSnippet = text ? ` [${text}]` : '';
+                addMessage(`📎 المرفق: ${fileInput.files[0].name}${attachmentSnippet}`, 'user-message');
+            } else {
+                addMessage(text, 'user-message');
+            }
+            
+            userInput.value = '';
+            loadingIndicator.style.display = 'block';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                let response;
+
+                if (hasFile) {
+                    // Send to upload endpoint using multipart Form Data payload mapping
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    formData.append('extra_query', text);
+                    formData.append('history', ''); 
+
+                    response = await fetch(`${BASE_API_URL}/chat/upload`, {
+                        method: 'POST',
+                        body: formData // Browser implicitly establishes appropriate multipart headers
+                    });
+                } else {
+                    // Normal text execution via basic JSON payload
+                    response = await fetch(`${BASE_API_URL}/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: text, history: '' })
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                loadingIndicator.style.display = 'none';
+                addBotMessage(data.response, data.intent);
+                clearFile(); // Reset file upload interface after success
+
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                addMessage('عذراً، حدث خطأ في الاتصال بالسيرفر. تأكد أن السيرفر يعمل.', 'bot-message');
+                console.error('Error:', error);
+            }
+        }
+
+        function addMessage(text, className) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addBotMessage(text, intent) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot-message';
+            
+            if(intent) {
+                const intentTag = document.createElement('span');
+                intentTag.className = 'intent-tag';
+                intentTag.textContent = intent;
+                messageDiv.appendChild(intentTag);
+            }
+
+            const textSpan = document.createElement('span');
+            textSpan.innerHTML = formatBotResponse(text);
+            messageDiv.appendChild(textSpan);
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function clearChat() {
+            clearFile();
+            chatBox.innerHTML = `
+                <div class="message bot-message">
+                    مرحباً بك في UJ RAG! اسألني عن أنظمة الجامعة، الرسوم، التدريب الميداني، أو أي استفسار آخر!
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
