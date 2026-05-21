@@ -176,7 +176,6 @@
             transform: scale(0.95);
         }
 
-        /* تنسيق النصوص اللي بتيجي من البوت (Bold) */
         .bot-message strong {
             color: #60a5fa;
         }
@@ -204,7 +203,7 @@
 
         <div class="chat-box" id="chatBox">
             <div class="message bot-message">
-                مرحباً بك! أنا مساعدك الأكاديمي. اسألني عن أنظمة الجامعة، الرسوم، التدريب الميداني، أو أي استفسار آخر!
+            
             </div>
         </div>
         
@@ -222,9 +221,6 @@
         const loadingIndicator = document.getElementById('loadingIndicator');
 
         const API_URL = 'http://127.0.0.1:8000/api/chat';
-        
-        // 1. ADD THIS: A variable to store the conversation history
-        let chatMemory = ""; 
 
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
@@ -233,6 +229,7 @@
         }
 
         function formatBotResponse(text) {
+
             return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
         }
 
@@ -240,20 +237,22 @@
             const text = userInput.value.trim();
             if (!text) return;
 
+  
             addMessage(text, 'user-message');
             userInput.value = '';
             
+
             loadingIndicator.style.display = 'block';
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
+
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    // 2. CHANGE THIS: Send the chatMemory to the backend
-                    body: JSON.stringify({ query: text, history: chatMemory })
+                    body: JSON.stringify({ query: text })
                 });
 
                 if (!response.ok) {
@@ -262,11 +261,9 @@
 
                 const data = await response.json();
                 
+                // إخفاء حالة التحميل وإضافة رد البوت
                 loadingIndicator.style.display = 'none';
                 addBotMessage(data.response, data.intent);
-
-                // 3. ADD THIS: Update the memory with the latest Q&A
-                chatMemory += `Student: ${text}\nAssistant: ${data.response}\n`;
 
             } catch (error) {
                 loadingIndicator.style.display = 'none';
@@ -308,8 +305,6 @@
                     مرحباً بك! أنا مساعدك الأكاديمي. اسألني عن أنظمة الجامعة، الرسوم، التدريب الميداني، أو أي استفسار آخر!
                 </div>
             `;
-            // 4. ADD THIS: Wipe the memory when the user clears the chat
-            chatMemory = "";
         }
     </script>
 </body>

@@ -1,16 +1,10 @@
 import requests
 from config import settings
 
-URL = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GENERATION_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
-
 
 def classify_intent(user_query: str) -> str:
-    """
-    يصنف السؤال لـ 3 أنواع فقط:
-    - GREETING: تحية أو كلام اجتماعي
-    - OFF_TOPIC: خارج نطاق الجامعة كلياً
-    - UNIVERSITY_REGULATIONS: أي سؤال له علاقة بالجامعة
-    """
+    URL = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GENERATION_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
+
     prompt = f"""Classify the following user input into exactly ONE category:
 
 - GREETING: Casual hello, goodbye, thanks, how are you, or any social chitchat.
@@ -42,5 +36,4 @@ Category:"""
     except Exception as e:
         print(f"[ROUTER ERROR] {e}")
 
-    # Default: always try to search
     return "UNIVERSITY_REGULATIONS"
