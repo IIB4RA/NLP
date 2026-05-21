@@ -1,8 +1,11 @@
 import json
 import requests
 import logging
+import os
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from router import classify_intent
@@ -10,10 +13,8 @@ from retriever import get_relevant_context
 from generator import generate_rag_response
 from config import settings
 
-# Importing your new VLM functions
 from vlm import extract_text_from_file, extract_question_from_text
 
-# Initialize logger and global configuration constants
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,6 @@ JSON:"""
         except Exception as e:
             print(f"[ERROR] Routing attempt {attempt+1} failed: {e}")
 
-    # Safe fallback
     return {
         "search_query": user_query,
         "extra_collections": [],
@@ -119,7 +119,6 @@ JSON:"""
 
 
 def search_with_expansion(smart_query: str) -> list:
-
     queries = [
         smart_query,
         f"{smart_query} لجميع الطلبة",
@@ -140,7 +139,6 @@ def search_with_expansion(smart_query: str) -> list:
 
 
 async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
-    # Step 1: Intent classification
     intent = classify_intent(user_question)
     print(f"\n[LOG] Intent: {intent}")
 
@@ -155,7 +153,6 @@ async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
             "intent": intent
         }
 
-    # Step 2: Smart routing
     routing = build_routing_decision(user_question, chat_history)
     smart_query            = routing["search_query"]
     extra_collections      = routing["extra_collections"]
@@ -166,7 +163,6 @@ async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
     print(f"[LOG] Extra Collections: {extra_collections}")
     print(f"[LOG] Needs Clarification: {needs_clarification}")
 
-    # Step 3: Clarification if needed
     if needs_clarification and clarification_question:
         return {
             "response": clarification_question,
@@ -174,17 +170,14 @@ async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
             "debug": {"reason": "needs_clarification", "query_built": smart_query}
         }
 
-    # Step 4: Search PRIMARY with query expansion
     all_contexts = search_with_expansion(smart_query)
 
-    # Step 5: Search extra specific collections
     for collection in extra_collections:
         context = get_relevant_context(smart_query, collection_name=collection)
         if context:
             all_contexts.append(context)
             print(f"[LOG] Extra collection {collection} returned results")
 
-    # Step 6: Fallback — search ALL specific collections
     if not all_contexts:
         print(f"[LOG] Fallback: searching all specific collections")
         for collection in SPECIFIC_COLLECTIONS:
@@ -204,7 +197,6 @@ async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
             }
         }
 
-    # Step 7: Generate answer
     response_text = generate_rag_response(smart_query, merged_context, chat_history)
 
     return {
@@ -216,16 +208,21 @@ async def run_core_rag_pipeline(user_question: str, chat_history: str) -> dict:
             "smart_query": smart_query
         }
     }
-    
 
+
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
+
+@app.get("/")
+async def serve_frontend():
+    return FileResponse('static/index.html')
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     user_question = request.query.strip()
     chat_history = request.history.strip()
-
     return await run_core_rag_pipeline(user_question, chat_history)
-
 
 
 @app.post("/api/chat/upload")
@@ -241,7 +238,7 @@ async def chat_upload_endpoint(
             "response": f"عذراً، حجم الملف ({size_mb:.1f} MB) يتجاوز الحد المسموح ({MAX_FILE_SIZE_MB} MB).",
             "intent": "ERROR",
         }
- 
+
     try:
         extracted_text = await extract_text_from_file(
             file_bytes=file_bytes,
@@ -256,27 +253,31 @@ async def chat_upload_endpoint(
             "response": "عذراً، حدث خطأ أثناء معالجة الملف. يرجى المحاولة مرة أخرى.",
             "intent": "ERROR",
         }
- 
+
     if not extracted_text or extracted_text == "[لا يوجد نص في الصورة]":
         return {
             "response": "لم أتمكن من استخراج نص من هذا الملف. يرجى التأكد من أن الملف يحتوي على نص واضح.",
             "intent": "ERROR",
         }
- 
+
     logger.info(f"[UPLOAD] Extracted {len(extracted_text)} chars from {file.filename}")
- 
+
     combined_text = (
         f"{extra_query.strip()}\n\n{extracted_text}" if extra_query.strip()
         else extracted_text
     )
- 
+
     user_question = await extract_question_from_text(combined_text)
     logger.info(f"[UPLOAD] Final question extracted from file context: {user_question}")
- 
-    # Run the extracted question through the exact same core pipeline asynchronously
+
     return await run_core_rag_pipeline(user_question=user_question, chat_history=history.strip())
+
+
+# Mount static files AFTER all routes are defined
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
