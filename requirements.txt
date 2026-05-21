@@ -12,3 +12,4 @@ qdrant-client
 transformers
 docx
 fitz
+PyMuPDF
