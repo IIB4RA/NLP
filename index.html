@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المساعد الأكاديمي الذكي | RAG System</title>
+    <title>UJ RAG</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -61,22 +61,6 @@
             font-size: 1.2rem;
             color: var(--primary);
             text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-        }
-
-        .status-dot {
-            height: 10px;
-            width: 10px;
-            background-color: #22c55e;
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 10px #22c55e;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
 
         .chat-box {
@@ -228,8 +212,7 @@
     <div class="chat-container">
         <div class="chat-header">
             <div>
-                <h2><span class="status-dot"></span> المساعد الأكاديمي الذكي</h2>
-                <span style="font-size: 0.8rem; color: var(--text-muted);">Powered by FastAPI & Gemini</span>
+                <h2>UJ RAG</h2>
             </div>
             <div>
                 <button onclick="clearChat()" style="background-color: transparent; border: 1px solid #475569; padding: 5px 10px; font-size: 0.8rem;">مسح المحادثة</button>
@@ -238,7 +221,7 @@
 
         <div class="chat-box" id="chatBox">
             <div class="message bot-message">
-                مرحباً بك! أنا مساعدك الأكاديمي الذكي. يمكنك كتابة استفسارك أو إرفاق ملف/صورة وسأقوم بتحليلها لك.
+                مرحباً بك في UJ RAG! يمكنك كتابة استفسارك أو إرفاق ملف/صورة وسأقوم بتحليلها لك.
             </div>
         </div>
         
@@ -269,6 +252,7 @@
         const loadingIndicator = document.getElementById('loadingIndicator');
 
         const BASE_API_URL = 'https://your-new-railway-app-name.up.railway.app/api';
+        
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
                 sendMessage();
@@ -385,7 +369,7 @@
             clearFile();
             chatBox.innerHTML = `
                 <div class="message bot-message">
-                    مرحباً بك! أنا مساعدك الأكاديمي. اسألني عن أنظمة الجامعة، الرسوم، التدريب الميداني، أو أي استفسار آخر!
+                    مرحباً بك في UJ RAG! اسألني عن أنظمة الجامعة، الرسوم، التدريب الميداني، أو أي استفسار آخر!
                 </div>
             `;
         }
